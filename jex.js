@@ -85,6 +85,7 @@ function JEX() {
           case "monthname": { return true; break; }
           case "networkdays": { return true; break; }
           case "now": { return true; break; }
+          case "getDate": { return true; break; }
           case "second": { return true; break; }
           case "time": { return true; break; }
           case "timeserial": { return true; break; }
@@ -124,7 +125,6 @@ function JEX() {
         if (isCharacter(tempTokenHolder)) {
           var et = tempTokenHolder, ix=i+1;
           while(isCharacter(code[ix]) && ix<code.length) { et += code[ix]; ix++; }
-          console.log(".." + et);
           if(isIdentifier(et) && !isFormula(et)) {
             addToken("IDENTIFIER", et);
             tempTokenHolder = "";
@@ -141,8 +141,8 @@ function JEX() {
 
         // check for numeric values
         // the below will test for 1 or 100 or -100 and will fail for 100-1
-        if(isDigit(tempTokenHolder) || (tempTokenHolder === "-" && isDigit(code[i+1]) &&
-            (((i-1)>-1 && !isDigit(code[i-1])) || !isDigit(code[i-1])))) {
+        if(isDigit(tempTokenHolder)) { // || (tempTokenHolder === "-" && isDigit(code[i+1]) &&
+            //(((i-1)>-1 && !isDigit(code[i-1])) || !isDigit(code[i-1])))) {
           var d = i + 1;
           while(d < code.length) {
             if(!isDigit(code[d])) break;
@@ -239,32 +239,89 @@ function JEX() {
     }
 
     function xFormula(token, params) {
-      var total;
-      var pars = Object.keys(token.p);
+      var total, tv, operator = "";
+      var pars = (token.p) ? Object.keys(token.p) : [];
       pars.sort();
-      console.log(pars);
-      return;
-      console.log(token);
-      for(pp in pars) {
-        switch(token.f) {
-          /* Math */
-          case "add" : {
-            if(!total) total = 0;
-            for(var par in token.p) {
-              if(isDigit(token.p[par])) {
-                total += token.p[par];
+      for(var i=0; i<pars.length; i++) {
+        var o = token.p[pars[i]];
+        if(typeof o === "object") {
+          switch(o.f.toLowerCase()) {
+            //Math
+            case "add" : {
+              if(!total) total = 0;
+              for(var par in o.p) {
+                if(isDigit(o.p[par])) {
+                  total += parseFloat(o.p[par]);
+                }
+                else if(typeof o.p[par] === "object") { total += parseFloat(xFormula(o.p[par])); }
+                else total = 0;
               }
-              else if(typeof token.p[par] === "object") { total += xFormula(token.p[par]); }
-              else return 0;
+              break;
             }
-            return total;
+            case "now":
+            case "today":
+            case "getdate": {
+              total = new Date();
+              break;
+            }
           }
         }
+        else {
+          /* if formula is null then check to see if an operation needs to be perform */
+          switch(operator) {
+              case "+": {
+                if(o.p && typeof o.p[i] === "object") {
+
+                }
+                else if(typeof total === "object" & Date.parse(total) > 0) {
+                    total = new Date(Date.parse(total) + (parseInt(o)*86400000));
+                }
+                else if(TryParseInt(o)) total = (total || 0) + parseInt(o);
+                operator = "";
+                break;
+              }
+              case "-": {
+                if(o.p && typeof o.p[i] === "object") {
+
+                }
+                else if(typeof total === "object" & Date.parse(total) > 0) {
+                    total = new Date(Date.parse(total) - (parseInt(o)*86400000));
+                }
+                else if(TryParseInt(o)) total = (total || 0) - parseInt(o);
+                operator = "";
+                break;
+              }
+              case "*": total = (total || 0) * o; operator = ""; break;
+              case "/": total = (total || 0) / o; operator = ""; break;
+              case "^": total = (total || 0) ^ o; operator = ""; break;
+              default : if(!isOperator(o)) total = (total || 0) + parseInt(o);
+            }
+            if(o === "+") operator = "+";
+            else if(o === "-") operator = "-";
+            else if(o === "*") operator = "*";
+            else if(o === "/") operator = "/";
+            else if(o === "^") operator = "^";
+        }
       }
+      return total;
     }
+
+
   }
   xf.prototype.Formula = function(statement, params) {
     return this.evaluate(statement, params);
+  }
+
+  function TryParseInt(str,defaultValue) {
+     var retValue = defaultValue;
+     if(str !== null) {
+         if(str.length > 0) {
+             if (!isNaN(str)) {
+                 retValue = parseInt(str);
+             }
+         }
+     }
+     return retValue;
   }
 
   return new xf();
