@@ -154,9 +154,9 @@ function JEX() {
           tempTokenHolder = "";
         }
         else if(tempTokenHolder === "'") {
-          var et = tempTokenHolder, ix=i;
+          var et = "", ix=i;
           while(code[++ix] != "'" && ix<code.length) { et += code[ix]; }
-          et += code[ix];
+          //et += code[ix];
           addToken("PARAMETER", et);
           tempTokenHolder = "";
           i=ix;
@@ -180,7 +180,7 @@ function JEX() {
           tempTokenHolder = "";
         }
       }
-      console.log(tokens);
+      //console.log(tokens);
       return tokens;
     }
 
@@ -239,7 +239,7 @@ function JEX() {
     }
 
     function xFormula(token, params) {
-      var total, tv, operator = "";
+      var total, tv, operator = "", formula = "";
       var pars = (token.p) ? Object.keys(token.p) : [];
       pars.sort();
       for(var i=0; i<pars.length; i++) {
@@ -262,6 +262,20 @@ function JEX() {
             case "today":
             case "getdate": {
               total = new Date();
+              break;
+            }
+            case "if": {
+              //the last two parameters will have the return results
+              var ol = Object.keys(o.p),
+                  fv = String.fromCharCode(65+ol.length-2).toLowerCase(),
+                  lv = String.fromCharCode(65+ol.length-1).toLowerCase(),
+                  trueP = o.p[fv],
+                  falseP = o.p[lv];
+              delete o.p[fv];
+              delete o.p[lv];
+              if(xFormula(o)) total = trueP;
+              else total = falseP;
+              if(typeof total === "object") total = xFormula(total);
               break;
             }
           }
@@ -294,13 +308,25 @@ function JEX() {
               case "*": total = (total || 0) * o; operator = ""; break;
               case "/": total = (total || 0) / o; operator = ""; break;
               case "^": total = (total || 0) ^ o; operator = ""; break;
-              default : if(!isOperator(o)) total = (total || 0) + parseInt(o);
+              case "=": {
+                if(total) total = (total == o);
+                else total = false;
+                operator = "";
+                break;
+              }
+              default : {
+                if(isOperator(o)) break;
+                if(typeof total === "object" & Date.parse(total) > 0) total = new Date(o);
+                else if(TryParseInt(o)) total = (total || 0) + parseFloat(o);
+                else if(typeof o === "string") total =  o;
+              }
             }
             if(o === "+") operator = "+";
             else if(o === "-") operator = "-";
             else if(o === "*") operator = "*";
             else if(o === "/") operator = "/";
             else if(o === "^") operator = "^";
+            else if(o === "=") operator = "=";
         }
       }
       return total;
