@@ -163,9 +163,9 @@ function JEX() {
           continue;
         }
         else if(tempTokenHolder === "#") {
-          var et = tempTokenHolder, ix=i;
+          var et = "", ix=i;
           while(code[++ix] != "#" && ix<code.length) { et += code[ix]; }
-          et += code[ix];
+          //et += code[ix];
           addToken("VARSOURCE", et);
           tempTokenHolder = "";
           i=ix;
@@ -184,7 +184,7 @@ function JEX() {
       return tokens;
     }
 
-    function parse(code) {
+    function parse(code, op) {
       var sym = {}, token, index=-1, par = 96, level=0,
         parameter = function() { par++; return String.fromCharCode(par); },
         advance = function() { token = tokens[++index]; };
@@ -221,7 +221,7 @@ function JEX() {
           else if(token.type === "VARSOURCE") {
             if(!x.p) x.p = {};
             var c = parameter();
-            x.p[c] = "#[add value]#";//token.value;
+            if(op) x.p[c] = op[token.value];
           }
         }
       }
@@ -231,7 +231,7 @@ function JEX() {
 
     this.evaluate = function (statement, params) {
       if(!statement || statement.length < 1) return "";
-      else if(statement[0] === "=") return xFormula(parse(statement.substring(1)));
+      else if(statement[0] === "=") return xFormula(parse(statement.substring(1), params));
       else return xFormula(statement);
       return -1;
       //console.log(parse(statement.substring(1)));

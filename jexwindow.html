@@ -329,7 +329,8 @@
 
     $(".executeButton").click(function() {
       //console.log($("textarea").val());
-      $(".test-formula").text("Result: " + j.Formula($("textarea").val()));
+      //params = {"wage":"1.00"};
+      $(".test-formula").text("Result: " + j.Formula($("textarea").val(), params));
     });
 
     $(".formula-list li").click(function() {
